@@ -1,4 +1,6 @@
 import {Component} from 'react'
+import Cookies from 'js-cookie'
+import {Redirect} from 'react-router-dom'
 
 import './index.css'
 
@@ -6,11 +8,24 @@ class LoginForm extends Component {
   state = {
     username: '',
     password: '',
+    showSubmitError: false,
+    errorMsg: '',
+    token: '',
   }
 
-  onSubmitSuccess = () => {
+  onSubmitSuccess = jwtToken => {
+    Cookies.set('jwt_token', jwtToken, {expires: 30})
     const {history} = this.props
+    console.log(history)
     history.replace('/')
+  }
+
+  onSubmitFailure = errorMsg => {
+    console.log(errorMsg)
+    this.setState({
+      showSubmitError: true,
+      errorMsg,
+    })
   }
 
   submitForm = async event => {
@@ -24,9 +39,12 @@ class LoginForm extends Component {
     }
     const response = await fetch(url, options)
     const data = await response.json()
-    console.log(data)
+    // console.log(data)
     if (response.ok === true) {
-      this.onSubmitSuccess()
+      this.onSubmitSuccess(data.jwt_token)
+      //   this.setState({token: data.jwt_token}) on refresh of page it will be removed from the state
+    } else {
+      this.onSubmitFailure(data.error_msg)
     }
   }
 
@@ -57,7 +75,8 @@ class LoginForm extends Component {
   }
 
   renderUsernameField = () => {
-    const {username} = this.state
+    const {username, token} = this.state
+    console.log(token)
     return (
       <>
         <label className="input-label" htmlFor="username">
@@ -75,6 +94,12 @@ class LoginForm extends Component {
   }
 
   render() {
+    const {errorMsg, showSubmitError} = this.state
+    // console.log(errorMsg)
+    const jwtToken = Cookies.get('jwt_token')
+    if (jwtToken !== undefined) {
+      return <Redirect to="/" />
+    }
     return (
       <div className="login-form-container">
         <img
@@ -98,6 +123,7 @@ class LoginForm extends Component {
           <button type="submit" className="login-button">
             Login
           </button>
+          {showSubmitError && <p className="error-message">*{errorMsg}</p>}
         </form>
       </div>
     )
